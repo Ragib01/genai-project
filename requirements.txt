@@ -1,0 +1,9 @@
+agno 
+fastapi
+uvicorn 
+openai
+sqlalchemy
+psycopg[binary]
+psycopg2-binary
+pgvector
+lancedb
