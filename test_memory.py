@@ -2,12 +2,16 @@
 Simple script to test memory storage with Agno
 Run this to verify your memory configuration is working
 """
+import logging
 from uuid import uuid4
 from agno.agent import Agent
 from agno.memory import MemoryManager
 from agno.db.postgres import PostgresDb
 from agno.models.lmstudio import LMStudio
 from rich.pretty import pprint
+
+# Enable debug logging to see what's happening
+logging.basicConfig(level=logging.DEBUG)
 
 # Database connection
 db_url = "postgresql://neondb_owner:npg_hdS5VbDo7gOG@ep-polished-mode-ahhpuyi0-pooler.c-3.us-east-1.aws.neon.tech/genai-project?sslmode=require&channel_binding=require"
@@ -24,17 +28,17 @@ print(f"Session ID: {session_id}")
 memory_manager = MemoryManager(
     db=db,
     model=LMStudio(
-        id="qwen/qwen3-1.7b",
+        id="qwen3-0.6b",
         base_url="http://localhost:1234/v1",
     ),
-    memory_capture_instructions="Capture important information about the user",
+    memory_capture_instructions="Extract and store key information about the user including their name, preferences, hobbies, and personal details.",
 )
 
 # Create agent with memory
 agent = Agent(
     name="Memory Test Agent",
     model=LMStudio(
-        id="qwen/qwen3-1.7b",
+        id="qwen3-0.6b",
         base_url="http://localhost:1234/v1",
     ),
     instructions=["You are a helpful assistant."],
@@ -42,8 +46,9 @@ agent = Agent(
     user_id=user_id,
     session_id=session_id,
     memory_manager=memory_manager,
-    enable_user_memories=True,  # This is all you need!
+    enable_user_memories=True,
     add_history_to_context=True,
+    debug_mode=True,  # Enable debug mode to see more info
 )
 
 print("\n" + "="*70)

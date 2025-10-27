@@ -1,3 +1,11 @@
+# Apply JSON encoder patch FIRST (before any agno imports)
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+from utils.json_encoder import patch_json_encoder
+patch_json_encoder()
+
+# Now import agno and agents
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from agno.os import AgentOS
