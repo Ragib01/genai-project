@@ -2,6 +2,7 @@
 RAG Agent with Memory Manager and Session Summaries
 Note: JSON encoder patch must be applied in main.py before importing this module
 """
+from re import L
 from uuid import uuid4
 import os
 from dotenv import load_dotenv
@@ -13,13 +14,30 @@ from agno.models.lmstudio import LMStudio
 from agno.session import SessionSummaryManager
 
 from agno.tools.memory import MemoryTools
+from agno.knowledge.knowledge import Knowledge
+from agno.vectordb.lancedb import LanceDb, SearchType
+from agno.knowledge.embedder.openai import OpenAIEmbedder
 
 load_dotenv()
 
+# Get environment variables
 POSTGRES_DB_URL = os.getenv("POSTGRES_DB_URL")
 LM_STUDIO_API_KEY = os.getenv("LM_STUDIO_API_KEY")
 LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_BASE_URL")
 RAG_AGENT_MODEL = os.getenv("RAG_AGENT_MODEL")
+
+# Check if all required environment variables are set
+if not POSTGRES_DB_URL:
+    raise ValueError("POSTGRES_DB_URL environment variable is required")
+
+if not LM_STUDIO_API_KEY:
+    raise ValueError("LM_STUDIO_API_KEY environment variable is required")
+
+if not LM_STUDIO_BASE_URL:
+    raise ValueError("LM_STUDIO_BASE_URL environment variable is required")
+
+if not RAG_AGENT_MODEL:
+    raise ValueError("RAG_AGENT_MODEL environment variable is required")
 
 db_url = POSTGRES_DB_URL
 
@@ -33,8 +51,8 @@ memory_tools = MemoryTools(
 memory_manager = MemoryManager(
     db=db,
     model=LMStudio(
-        id="qwen3-0.6b",
-        base_url="http://localhost:1234/v1",
+        id="qwen3-0.6b", # small model for memory management
+        base_url=LM_STUDIO_BASE_URL,
     ),
     memory_capture_instructions="Extract and store key information about the user including their name, preferences, hobbies, and personal details.",
 )
@@ -43,18 +61,35 @@ memory_manager = MemoryManager(
 session_summary_manager = SessionSummaryManager(
     # Select the model used for session summary creation and updates. If not specified, the agent's model is used by default.
     model=LMStudio(
-        id="qwen3-0.6b",
-        base_url="http://localhost:1234/v1",
+        id="qwen3-0.6b", # small model for session summary management
+        base_url=LM_STUDIO_BASE_URL,
     ),
     # You can also overwrite the prompt used for session summary creation
     session_summary_prompt="Create a very succinct summary of the following conversation:",
 )
 
+embedder = OpenAIEmbedder(
+        id="text-embedding-nomic-embed-text-v1.5",
+        api_key=LM_STUDIO_API_KEY,
+        base_url=LM_STUDIO_BASE_URL,
+        dimensions=768  # Add this for custom dimensions
+    )
+
+knowledge = Knowledge(
+    vector_db=LanceDb(
+        table_name="unimart_company_profile",
+        uri="tmp/lancedb",
+        search_type=SearchType.hybrid, # SearchType.hybrid combines vector (semantic) and keyword (lexical) search for better results. 
+        embedder=embedder,
+    ),
+    max_results=2,
+)
+
 rag_agent = Agent(
     name="RAG Agent",
     model=LMStudio(
-        id="qwen3-0.6b",
-        base_url="http://localhost:1234/v1",
+        id=RAG_AGENT_MODEL,
+        base_url=LM_STUDIO_BASE_URL,
     ),
     tools=[memory_tools],
     instructions=["You are a helpful assistant. ./no_think"],
@@ -64,6 +99,9 @@ rag_agent = Agent(
     # enable_user_memories=True,  # Automatically extracts memories from conversations
     add_history_to_context=True,
     num_history_runs=3,
+    knowledge=knowledge,
+    add_knowledge_to_context=True,
+    search_knowledge=True,
     session_summary_manager=session_summary_manager,
     enable_session_summaries=True,  # Enabled (requires JSON encoder patch in main.py)
 )

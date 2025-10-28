@@ -11,3 +11,4 @@ pypdf
 tantivy
 pandas
 python-dotenv
+markdown 
