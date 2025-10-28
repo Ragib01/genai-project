@@ -3,6 +3,8 @@ RAG Agent with Memory Manager and Session Summaries
 Note: JSON encoder patch must be applied in main.py before importing this module
 """
 from uuid import uuid4
+import os
+from dotenv import load_dotenv
 
 from agno.agent.agent import Agent
 from agno.memory import MemoryManager
@@ -12,7 +14,14 @@ from agno.session import SessionSummaryManager
 
 from agno.tools.memory import MemoryTools
 
-db_url = "postgresql://neondb_owner:npg_hdS5VbDo7gOG@ep-polished-mode-ahhpuyi0-pooler.c-3.us-east-1.aws.neon.tech/genai-project?sslmode=require&channel_binding=require"
+load_dotenv()
+
+POSTGRES_DB_URL = os.getenv("POSTGRES_DB_URL")
+LM_STUDIO_API_KEY = os.getenv("LM_STUDIO_API_KEY")
+LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_BASE_URL")
+RAG_AGENT_MODEL = os.getenv("RAG_AGENT_MODEL")
+
+db_url = POSTGRES_DB_URL
 
 db = PostgresDb(db_url=db_url)
 

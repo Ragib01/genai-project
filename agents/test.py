@@ -9,6 +9,9 @@ from agno.memory import MemoryManager
 from agno.db.postgres import PostgresDb
 from agno.models.lmstudio import LMStudio
 from agno.session import SessionSummaryManager
+from agno.knowledge.knowledge import Knowledge
+from agno.vectordb.lancedb import LanceDb
+from agno.knowledge.embedder.openai import OpenAIEmbedder
 
 db_url = "postgresql://neondb_owner:npg_hdS5VbDo7gOG@ep-polished-mode-ahhpuyi0-pooler.c-3.us-east-1.aws.neon.tech/genai-project?sslmode=require&channel_binding=require"
 
@@ -35,6 +38,17 @@ session_summary_manager = SessionSummaryManager(
     session_summary_prompt="Create a very succinct summary of the following conversation:",
 )
 
+embedder = OpenAIEmbedder(
+    id="text-embedding-nomic-embed-text-v1.5",
+    api_key="LM-studio",
+    base_url="http://localhost:7777",
+    dimensions=768  # Add this for custom dimensions
+)
+
+knowledge = Knowledge(
+    vector_db=LanceDb(table_name="orangebd_company_profile", uri="tmp/lancedb", embedder=embedder)
+)
+
 rag_agent = Agent(
     name="RAG Agent",
     model=LMStudio(
@@ -43,6 +57,9 @@ rag_agent = Agent(
     ),
     instructions=["You are a helpful assistant. ./no_think"],
     db=db,
+    knowledge=knowledge,
+    add_knowledge_to_context=True,
+    search_knowledge=True,
     # user_id and session_id are None here - will be provided dynamically by AgentOS per request
     # memory_manager=memory_manager,
     enable_user_memories=True,  # Automatically extracts memories from conversations
@@ -53,6 +70,6 @@ rag_agent = Agent(
 )
 
 rag_agent.print_response(
-    "My name is John Doe and I love hiking in the mountains on weekends.",
+    "who is the CEO of Orangebd?",
     stream=True,
 )
